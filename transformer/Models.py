@@ -16,7 +16,7 @@ def get_subsequent_mask(seq):
     ''' For masking out the subsequent info. '''
     sz_b, len_s = seq.size()
     subsequent_mask = (1 - torch.triu(
-        torch.ones((1, len_s, len_s), device=seq.device), diagonal=1)).bool()
+        torch.ones((1, len_s, len_s), device=seq.device), diagonal=1)).bool() # torch.triu() to get up triangle matrix, (1 - torch.triu) to get down triangle matrix
     return subsequent_mask
 
 
@@ -35,14 +35,14 @@ class PositionalEncoding(nn.Module):
         def get_position_angle_vec(position):
             return [position / np.power(10000, 2 * (hid_j // 2) / d_hid) for hid_j in range(d_hid)]
 
-        sinusoid_table = np.array([get_position_angle_vec(pos_i) for pos_i in range(n_position)])
+        sinusoid_table = np.array([get_position_angle_vec(pos_i) for pos_i in range(n_position)]) # 假设sequence最多有n_position=200个词
         sinusoid_table[:, 0::2] = np.sin(sinusoid_table[:, 0::2])  # dim 2i
         sinusoid_table[:, 1::2] = np.cos(sinusoid_table[:, 1::2])  # dim 2i+1
 
         return torch.FloatTensor(sinusoid_table).unsqueeze(0)
 
     def forward(self, x):
-        return x + self.pos_table[:, :x.size(1)].clone().detach()
+        return x + self.pos_table[:, :x.size(1)].clone().detach() # detach表示PE不参与梯度训练，是固定值
 
 
 class Encoder(nn.Module):
@@ -54,8 +54,8 @@ class Encoder(nn.Module):
 
         super().__init__()
 
-        self.src_word_emb = nn.Embedding(n_src_vocab, d_word_vec, padding_idx=pad_idx)
-        self.position_enc = PositionalEncoding(d_word_vec, n_position=n_position)
+        self.src_word_emb = nn.Embedding(n_src_vocab, d_word_vec, padding_idx=pad_idx) # n_src_vocab为词表的大小， 在训练中，遇到 pad_idx 这个索引时，Embedding 会自动输出 全零向量，并且这个向量不会参与梯度更新
+        self.position_enc = PositionalEncoding(d_word_vec, n_position=n_position) # 对embedding增加位置编码
         self.dropout = nn.Dropout(p=dropout)
         self.layer_stack = nn.ModuleList([
             EncoderLayer(d_model, d_inner, n_head, d_k, d_v, dropout=dropout)
@@ -186,8 +186,8 @@ class Transformer(nn.Module):
 
     def forward(self, src_seq, trg_seq):
 
-        src_mask = get_pad_mask(src_seq, self.src_pad_idx)
-        trg_mask = get_pad_mask(trg_seq, self.trg_pad_idx) & get_subsequent_mask(trg_seq)
+        src_mask = get_pad_mask(src_seq, self.src_pad_idx) # 输入的句子长度不一致，通常padding为1，这些位置不需要attention 
+        trg_mask = get_pad_mask(trg_seq, self.trg_pad_idx) & get_subsequent_mask(trg_seq) # decoder在解码时不能看到未来的词
 
         enc_output, *_ = self.encoder(src_seq, src_mask)
         dec_output, *_ = self.decoder(trg_seq, trg_mask, enc_output, src_mask)
