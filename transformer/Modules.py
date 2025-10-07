@@ -14,10 +14,10 @@ class ScaledDotProductAttention(nn.Module):
 
     def forward(self, q, k, v, mask=None):
 
-        attn = torch.matmul(q / self.temperature, k.transpose(2, 3))
+        attn = torch.matmul(q / self.temperature, k.transpose(2, 3)) # temperature: d_k ** (0.5)
 
         if mask is not None:
-            attn = attn.masked_fill(mask == 0, -1e9)
+            attn = attn.masked_fill(mask == 0, -1e9) # masked attention，在softmax之前进行
 
         attn = self.dropout(F.softmax(attn, dim=-1))
         output = torch.matmul(attn, v)
